@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="480" viewBox="0 0 900 480" role="img" aria-labelledby="title desc">
+  <title id="title">三枚公平硬币理论概率与物理模拟对比</title>
+  <desc id="desc">20,000 次物理模拟中，6、7、8、9 四种结果与三枚独立公平硬币的理论概率非常接近。</desc>
+  <rect width="900" height="480" rx="24" fill="#f1ede5"/>
+  <text x="55" y="52" fill="#25221d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="700">三枚公平硬币理论 vs 物理模拟</text>
+  <text x="55" y="80" fill="#706a61" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14">20,000 次完整三币抛掷 · 60,000 个落稳币面</text>
+
+  <rect x="594" y="42" width="16" height="16" rx="3" fill="#28251f"/>
+  <text x="618" y="55" fill="#4f4a43" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14">公平硬币理论</text>
+  <rect x="730" y="42" width="16" height="16" rx="3" fill="#9b7638"/>
+  <text x="754" y="55" fill="#4f4a43" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14">物理模拟</text>
+
+  <g stroke="#d4cec3" stroke-width="1">
+    <line x1="95" y1="120" x2="840" y2="120"/>
+    <line x1="95" y1="190" x2="840" y2="190"/>
+    <line x1="95" y1="260" x2="840" y2="260"/>
+    <line x1="95" y1="330" x2="840" y2="330"/>
+    <line x1="95" y1="400" x2="840" y2="400"/>
+  </g>
+  <g fill="#797268" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13" text-anchor="end">
+    <text x="82" y="125">40%</text>
+    <text x="82" y="195">30%</text>
+    <text x="82" y="265">20%</text>
+    <text x="82" y="335">10%</text>
+    <text x="82" y="405">0%</text>
+  </g>
+
+  <g fill="#28251f">
+    <rect x="130" y="312.5" width="50" height="87.5" rx="5"/>
+    <rect x="300" y="137.5" width="50" height="262.5" rx="5"/>
+    <rect x="470" y="137.5" width="50" height="262.5" rx="5"/>
+    <rect x="640" y="312.5" width="50" height="87.5" rx="5"/>
+  </g>
+  <g fill="#9b7638">
+    <rect x="190" y="313.83" width="50" height="86.17" rx="5"/>
+    <rect x="360" y="136.87" width="50" height="263.13" rx="5"/>
+    <rect x="530" y="134.805" width="50" height="265.195" rx="5"/>
+    <rect x="700" y="314.495" width="50" height="85.505" rx="5"/>
+  </g>
+
+  <g fill="#4b463f" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" text-anchor="middle">
+    <text x="155" y="302">12.500%</text>
+    <text x="215" y="303">12.310%</text>
+    <text x="325" y="127">37.500%</text>
+    <text x="385" y="126">37.590%</text>
+    <text x="495" y="127">37.500%</text>
+    <text x="555" y="124">37.885%</text>
+    <text x="665" y="302">12.500%</text>
+    <text x="725" y="304">12.215%</text>
+  </g>
+  <g fill="#25221d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="700" text-anchor="middle">
+    <text x="185" y="432">6 · 老阴</text>
+    <text x="355" y="432">7 · 少阳</text>
+    <text x="525" y="432">8 · 少阴</text>
+    <text x="695" y="432">9 · 老阳</text>
+  </g>
+  <text x="450" y="462" fill="#797268" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13" text-anchor="middle">χ² = 2.711 · df = 3 · p = 0.438 · 未检测到显著偏离</text>
+</svg>

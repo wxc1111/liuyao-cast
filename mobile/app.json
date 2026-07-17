@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "六爻抛币",
+    "slug": "liuyao-cast",
+    "description": "用手机动作完成三枚铜钱六轮抛掷，只记录爻，不提供解卦。",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#e7e3dc",
+    "plugins": [
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "允许六爻抛币读取手机动作，用于模拟铜钱在圆盘中的摇动、碰撞和抛掷。"
+        }
+      ],
+      "expo-font",
+      "expo-status-bar"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.liuyao.cast"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.liuyao.cast"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "215ad3bd-cf8e-4ed0-88d3-0bee4e1322f5"
+      }
+    },
+    "owner": "wxc1111"
+  }
+}

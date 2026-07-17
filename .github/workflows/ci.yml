@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+
+      - name: Install browser preview dependencies
+        run: npm ci
+
+      - name: Install native app dependencies
+        run: npm ci
+        working-directory: mobile
+
+      - name: Build and test
+        run: npm run check
+
+      - name: Check physical probability distribution
+        run: npm run benchmark:probability
+
+      - name: Validate Expo project
+        run: npx expo-doctor
+        working-directory: mobile
+
+      - name: Export Android bundle
+        run: npm run export:android
+        working-directory: mobile
+
+      - name: Export iOS bundle
+        run: npm run export:ios
+        working-directory: mobile

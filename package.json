@@ -1,0 +1,28 @@
+{
+  "name": "liuyao-cast",
+  "version": "0.1.0-beta.0",
+  "private": true,
+  "type": "module",
+  "description": "A sensor-driven three-coin casting simulator that records six lines without interpretation.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/physics.test.ts",
+    "benchmark:probability": "node scripts/probability-benchmark.mjs",
+    "check": "npm run build && npm run test && npm --prefix mobile run typecheck"
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-icons": "^5.7.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "5.0.4",
+    "vite": "6.4.3"
+  }
+}

@@ -1,0 +1,35 @@
+# Dependencies and caches
+node_modules/
+mobile/node_modules/
+.npm-cache/
+mobile/.expo/
+
+# Build outputs
+dist/
+mobile/dist-android/
+mobile/dist-ios/
+mobile/builds/
+*.apk
+*.aab
+*.ipa
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+.npmrc
+
+# Local AI/prototype working files
+AGENTS.md
+mobile/AGENTS.md
+mobile/CLAUDE.md
+design-qa.md
+.codex/
+.claude/
+mobile/.claude/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
