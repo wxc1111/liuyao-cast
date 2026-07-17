@@ -12,8 +12,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/physics.test.ts",
-    "benchmark:probability": "node scripts/probability-benchmark.mjs",
+    "test": "tsx --test tests/physics.test.ts",
+    "benchmark:probability": "tsx scripts/probability-benchmark.mjs",
     "check": "npm run build && npm run test && npm --prefix mobile run typecheck"
   },
   "dependencies": {
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "5.0.4",
+    "tsx": "^4.20.6",
     "vite": "6.4.3"
   }
 }
