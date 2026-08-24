@@ -21,6 +21,24 @@ import { CoinPhysics, faceFromFlip } from '../mobile/src/core/physics.ts';
 
 const STORAGE_KEY = 'liuyao.web-lines.v1';
 const EMPTY_MOTION = { ax: 0, ay: 0, az: 0, tiltX: 0, tiltY: 0, rotationRate: 0 };
+const EMPTY_POINTER = {
+  active: false,
+  pointerId: null,
+  originX: 0,
+  originY: 0,
+  localOriginX: 0,
+  localOriginY: 0,
+  localScaleX: 1,
+  localScaleY: 1,
+  lastX: 0,
+  lastY: 0,
+  lastTime: 0,
+  velocityX: 0,
+  velocityY: 0,
+  distanceForce: 0,
+  force: 0,
+};
+const EMPTY_GESTURE = { active: false, originX: 0, originY: 0, dx: 0, dy: 0, force: 0 };
 const COIN_EDGE_LAYERS = [
   { offset: 1, filter: 'brightness(.43) sepia(.55) saturate(1.4)' },
   { offset: 0.8, filter: 'brightness(.57) sepia(.5) saturate(1.35)' },
@@ -28,6 +46,11 @@ const COIN_EDGE_LAYERS = [
   { offset: 0.4, filter: 'brightness(.93) sepia(.28) saturate(1.1)' },
   { offset: 0.2, filter: 'brightness(.64) sepia(.45) saturate(1.3)' },
 ];
+
+const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+
+const hasFinePointer = () =>
+  typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 const randomUnitValues = () => {
   const values = new Uint32Array(12);
@@ -160,7 +183,7 @@ function LineProgress({ lines }) {
   );
 }
 
-function CastFeedback({ snapshot, lines, lastCast, motion, onOpenHistory }) {
+function CastFeedback({ snapshot, lines, lastCast, motion, controlMode, onOpenHistory }) {
   const completed = lines.length === 6 && snapshot.phase !== 'holding' && snapshot.phase !== 'tossing';
   const energy = Math.max(0, Math.min(1, snapshot.shakeEnergy / 1.4));
   const tilt = Math.max(0, Math.min(1, Math.hypot(motion.tiltX, motion.tiltY)));
@@ -195,7 +218,11 @@ function CastFeedback({ snapshot, lines, lastCast, motion, onOpenHistory }) {
         <span className="energy-track" aria-hidden="true">
           <span className="energy-fill" style={{ width: `${Math.max(4, energy * 100)}%` }} />
         </span>
-        <span className="feedback-hint">倾斜 {Math.round(tilt * 100)}% · 松开后抛出</span>
+        <span className="feedback-hint">
+          {controlMode === 'pointer'
+            ? `拖动倾斜 ${Math.round(tilt * 100)}% · 松开抛出`
+            : `倾斜 ${Math.round(tilt * 100)}% · 松开后抛出`}
+        </span>
       </section>
     );
   }
@@ -243,14 +270,18 @@ function CastFeedback({ snapshot, lines, lastCast, motion, onOpenHistory }) {
   return (
     <section className="feedback-panel" aria-label="抛掷动作说明">
       <span className="gesture-steps">
-        {['按住', '摇动', '松开'].map((label, index) => (
+        {(controlMode === 'pointer' ? ['按住', '拖动', '松开'] : ['按住', '摇动', '松开']).map((label, index) => (
           <span className="gesture-step" key={label}>
             <b>{index + 1}</b>
             <span>{label}</span>
           </span>
         ))}
       </span>
-      <span className="feedback-hint">动作力度会影响高度、翻转与碰撞</span>
+      <span className="feedback-hint">
+        {controlMode === 'pointer'
+          ? '拖动距离控制力度，方向控制托盘倾斜'
+          : '动作力度会影响高度、翻转与碰撞'}
+      </span>
     </section>
   );
 }
@@ -334,7 +365,8 @@ function HistoryView({ history, onBack, onDelete, onClear }) {
 export function App() {
   const engineRef = useRef(new CoinPhysics());
   const motionRef = useRef(EMPTY_MOTION);
-  const pointerRef = useRef({ x: 0, y: 0, time: 0 });
+  const pointerRef = useRef(EMPTY_POINTER);
+  const controlModeRef = useRef(hasFinePointer() ? 'pointer' : 'device');
   const recordedRoundRef = useRef(false);
   const linesRef = useRef([]);
   const lastImpactRef = useRef(0);
@@ -342,6 +374,8 @@ export function App() {
   const [lines, setLines] = useState(loadLines);
   const [lastCast, setLastCast] = useState(null);
   const [sensorState, setSensorState] = useState('idle');
+  const [controlMode, setControlMode] = useState(controlModeRef.current);
+  const [gesture, setGesture] = useState(EMPTY_GESTURE);
   const [history, setHistory] = useState(loadHistory);
   const [screen, setScreen] = useState('cast');
   const traySize = 354;
@@ -372,6 +406,7 @@ export function App() {
         }
       }
       const listener = (event) => {
+        if (controlModeRef.current !== 'device') return;
         const acceleration = event.acceleration ?? {};
         const gravity = event.accelerationIncludingGravity ?? {};
         const rotation = event.rotationRate ?? {};
@@ -416,6 +451,9 @@ export function App() {
     let previous = performance.now();
     const tick = (now) => {
       const events = engineRef.current.step((now - previous) / 1000, motionRef.current);
+      if (engineRef.current.getSnapshot().phase === 'holding' && controlModeRef.current === 'pointer') {
+        engineRef.current.setHoldingEnergy(pointerRef.current.force * 1.4);
+      }
       previous = now;
       const next = engineRef.current.getSnapshot();
       if (next.phase !== 'idle' || engineRef.current.getSnapshot().phase !== 'idle') setSnapshot(next);
@@ -432,34 +470,134 @@ export function App() {
 
   const startHolding = (event) => {
     if (snapshot.phase !== 'idle' || lines.length >= 6) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    pointerRef.current = { x: event.clientX, y: event.clientY, time: performance.now() };
+    const rect = event.currentTarget.getBoundingClientRect();
+    const localScaleX = event.currentTarget.clientWidth / Math.max(rect.width, 1);
+    const localScaleY = event.currentTarget.clientHeight / Math.max(rect.height, 1);
+    const nextControlMode = event.pointerType === 'mouse' || event.pointerType === 'pen'
+      ? 'pointer'
+      : 'device';
+    controlModeRef.current = nextControlMode;
+    setControlMode(nextControlMode);
+    pointerRef.current = {
+      ...EMPTY_POINTER,
+      active: true,
+      pointerId: event.pointerId,
+      originX: event.clientX,
+      originY: event.clientY,
+      localOriginX: (event.clientX - rect.left) * localScaleX,
+      localOriginY: (event.clientY - rect.top) * localScaleY,
+      localScaleX,
+      localScaleY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      lastTime: performance.now(),
+    };
+    setGesture({
+      active: nextControlMode === 'pointer',
+      originX: (event.clientX - rect.left) * localScaleX,
+      originY: (event.clientY - rect.top) * localScaleY,
+      dx: 0,
+      dy: 0,
+      force: 0,
+    });
     engineRef.current.beginHolding();
     setSnapshot(engineRef.current.getSnapshot());
-    ensureMotion();
+    if (nextControlMode === 'device') ensureMotion();
     vibrate(8);
   };
 
   const moveHolding = (event) => {
-    if (engineRef.current.getSnapshot().phase !== 'holding' || sensorState === 'active') return;
+    const pointer = pointerRef.current;
+    if (
+      engineRef.current.getSnapshot().phase !== 'holding' ||
+      !pointer.active ||
+      pointer.pointerId !== event.pointerId ||
+      (controlModeRef.current === 'device' && !['denied', 'unavailable'].includes(sensorState))
+    ) return;
+    event.preventDefault();
     const now = performance.now();
-    const dt = Math.max(16, now - pointerRef.current.time);
-    const dx = event.clientX - pointerRef.current.x;
-    const dy = event.clientY - pointerRef.current.y;
+    const dt = Math.max(8, now - pointer.lastTime);
+    const frameX = event.clientX - pointer.lastX;
+    const frameY = event.clientY - pointer.lastY;
+    const dx = event.clientX - pointer.originX;
+    const dy = event.clientY - pointer.originY;
+    const instantVelocityX = frameX / dt;
+    const instantVelocityY = frameY / dt;
+    const velocityX = pointer.velocityX * 0.42 + instantVelocityX * 0.58;
+    const velocityY = pointer.velocityY * 0.42 + instantVelocityY * 0.58;
+    const distanceForce = clamp(Math.hypot(dx, dy) / 118, 0, 1);
+    const speedForce = clamp(Math.hypot(velocityX, velocityY) / 1.15, 0, 1);
+    const force = clamp(distanceForce * 0.78 + speedForce * 0.22, 0, 1);
+
+    if (controlModeRef.current === 'device') {
+      controlModeRef.current = 'pointer';
+      setControlMode('pointer');
+    }
+
     motionRef.current = {
-      ax: (dx / dt) * 105,
-      ay: (dy / dt) * 105,
-      az: Math.hypot(dx, dy) * 0.18,
-      tiltX: Math.max(-1, Math.min(1, dx / 80)),
-      tiltY: Math.max(-1, Math.min(1, -dy / 80)),
-      rotationRate: Math.hypot(dx, dy) * 4,
+      ax: clamp(dx / 20 + velocityX * 2.2, -9, 9),
+      ay: clamp(dy / 20 + velocityY * 2.2, -9, 9),
+      az: force * 4.5,
+      tiltX: clamp(dx / 112, -1, 1),
+      tiltY: clamp(-dy / 112, -1, 1),
+      rotationRate: force * 180,
     };
-    pointerRef.current = { x: event.clientX, y: event.clientY, time: now };
+    pointerRef.current = {
+      ...pointer,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      lastTime: now,
+      velocityX,
+      velocityY,
+      distanceForce,
+      force,
+    };
+    engineRef.current.setHoldingEnergy(force * 1.4);
+    setGesture({
+      active: true,
+      originX: pointer.localOriginX,
+      originY: pointer.localOriginY,
+      dx: dx * pointer.localScaleX,
+      dy: dy * pointer.localScaleY,
+      force,
+    });
   };
 
-  const releaseCoins = () => {
+  const releaseCoins = (event) => {
     if (engineRef.current.getSnapshot().phase !== 'holding') return;
-    engineRef.current.release(randomUnitValues(), motionRef.current);
+    const pointer = pointerRef.current;
+    if (event?.pointerId != null && pointer.pointerId !== event.pointerId) return;
+
+    let releaseMotion = motionRef.current;
+    if (controlModeRef.current === 'pointer') {
+      const movementAge = Math.max(0, performance.now() - pointer.lastTime);
+      const velocityWeight = clamp(1 - movementAge / 150, 0, 1);
+      const speedForce = clamp(
+        Math.hypot(pointer.velocityX, pointer.velocityY) * velocityWeight / 1.15,
+        0,
+        1,
+      );
+      const force = clamp(pointer.distanceForce * 0.78 + speedForce * 0.22, 0, 1);
+      const totalX = pointer.lastX - pointer.originX;
+      const totalY = pointer.lastY - pointer.originY;
+      releaseMotion = {
+        ax: clamp(totalX / 20 + pointer.velocityX * velocityWeight * 2.2, -9, 9),
+        ay: clamp(totalY / 20 + pointer.velocityY * velocityWeight * 2.2, -9, 9),
+        az: force * 4.5,
+        tiltX: clamp(totalX / 112, -1, 1),
+        tiltY: clamp(-totalY / 112, -1, 1),
+        rotationRate: force * 180,
+      };
+      engineRef.current.setHoldingEnergy(force * 1.4);
+    }
+
+    engineRef.current.release(randomUnitValues(), releaseMotion);
+    if (controlModeRef.current === 'pointer') motionRef.current = EMPTY_MOTION;
+    pointerRef.current = EMPTY_POINTER;
+    setGesture(EMPTY_GESTURE);
     setSnapshot(engineRef.current.getSnapshot());
   };
 
@@ -469,6 +607,8 @@ export function App() {
     engineRef.current.reset();
     recordedRoundRef.current = false;
     motionRef.current = EMPTY_MOTION;
+    pointerRef.current = EMPTY_POINTER;
+    setGesture(EMPTY_GESTURE);
     setLastCast(null);
     setSnapshot(engineRef.current.getSnapshot());
   };
@@ -479,6 +619,8 @@ export function App() {
     engineRef.current.reset();
     recordedRoundRef.current = false;
     motionRef.current = EMPTY_MOTION;
+    pointerRef.current = EMPTY_POINTER;
+    setGesture(EMPTY_GESTURE);
     setLastCast(null);
     setSnapshot(engineRef.current.getSnapshot());
   };
@@ -486,6 +628,7 @@ export function App() {
   const statusText = useMemo(() => {
     if (lines.length >= 6 && snapshot.phase === 'settled') return '六爻已经记录完成';
     if (snapshot.phase === 'holding') {
+      if (controlMode === 'pointer') return '拖动距离控制力度，松开抛出';
       if (sensorState === 'active') return '正在感应动作';
       if (sensorState === 'requesting') return '正在准备动作传感器';
       return '拖动模拟摇动，松开完成抛掷';
@@ -494,8 +637,8 @@ export function App() {
     if (snapshot.phase === 'settled' && lastCast) {
       return `${lastCast.faces.map(faceLabel).join(' · ')}，${lastCast.sum} ${lastCast.label}`;
     }
-    return '按住圆盘，摇动手机';
-  }, [lastCast, lines.length, sensorState, snapshot.phase]);
+    return controlMode === 'pointer' ? '按住托盘，拖动鼠标控制力度' : '按住圆盘，摇动手机';
+  }, [controlMode, lastCast, lines.length, sensorState, snapshot.phase]);
 
   const buttonLabel =
     lines.length >= 6 && snapshot.phase !== 'holding' && snapshot.phase !== 'tossing'
@@ -556,11 +699,19 @@ export function App() {
       </header>
 
       <div className="sensor-status" aria-live="polite">
-        <span className={`sensor-dot${snapshot.phase === 'holding' && sensorState === 'active' ? ' is-active' : ''}`} />
+        <span className={`sensor-dot${snapshot.phase === 'holding' && (controlMode === 'pointer' || sensorState === 'active') ? ' is-active' : ''}`} />
         <span>{statusText}</span>
       </div>
 
-      <section className="tray-stage" style={{ width: traySize, height: traySize }}>
+      <section
+        className={`tray-stage${gesture.active ? ' is-dragging' : ''}`}
+        style={{ width: traySize, height: traySize }}
+        aria-label={controlMode === 'pointer' ? '三枚铜钱托盘，按住拖动控制力度' : '三枚铜钱托盘'}
+        onPointerDown={startHolding}
+        onPointerMove={moveHolding}
+        onPointerUp={releaseCoins}
+        onPointerCancel={releaseCoins}
+      >
         <img className="tray-image" src="/assets/casting-tray.png" alt="深色木质铜钱圆盘" />
         <span
           aria-hidden="true"
@@ -573,14 +724,36 @@ export function App() {
         {snapshot.coins.map((coin) => (
           <CoinSprite key={coin.id} coin={coin} traySize={traySize} />
         ))}
+        {gesture.active && (
+          <span className="drag-guide" aria-hidden="true">
+            <span
+              className="drag-line"
+              style={{
+                left: gesture.originX,
+                top: gesture.originY,
+                width: Math.hypot(gesture.dx, gesture.dy),
+                opacity: 0.35 + gesture.force * 0.55,
+                transform: `rotate(${Math.atan2(gesture.dy, gesture.dx)}rad)`,
+              }}
+            />
+            <span
+              className="drag-origin"
+              style={{ left: gesture.originX, top: gesture.originY }}
+            />
+            <span
+              className="drag-handle"
+              style={{
+                left: gesture.originX + gesture.dx,
+                top: gesture.originY + gesture.dy,
+                transform: `scale(${0.82 + gesture.force * 0.28})`,
+              }}
+            />
+          </span>
+        )}
         <button
           className="cast-button"
           type="button"
           disabled={snapshot.phase === 'tossing'}
-          onPointerDown={startHolding}
-          onPointerMove={moveHolding}
-          onPointerUp={releaseCoins}
-          onPointerCancel={releaseCoins}
           onClick={snapshot.phase === 'settled' || lines.length >= 6 ? nextRound : undefined}
         >
           {buttonLabel}
@@ -588,7 +761,11 @@ export function App() {
       </section>
 
       <p className="instruction">
-        {snapshot.phase === 'settled' ? `第 ${lines.length} 爻已自动记录` : '按住圆盘，摇动手机'}
+        {snapshot.phase === 'settled'
+          ? `第 ${lines.length} 爻已自动记录`
+          : controlMode === 'pointer'
+            ? '按住托盘，拖动蓄力后松开'
+            : '按住圆盘，摇动手机'}
       </p>
 
       <LineProgress lines={lines} />
@@ -598,6 +775,7 @@ export function App() {
         lines={lines}
         lastCast={lastCast}
         motion={motionRef.current}
+        controlMode={controlMode}
         onOpenHistory={() => setScreen('history')}
       />
 

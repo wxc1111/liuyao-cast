@@ -154,6 +154,11 @@ export class CoinPhysics {
     }
   }
 
+  setHoldingEnergy(energy: number) {
+    if (this.phase !== 'holding') return;
+    this.shakeEnergy = clamp(energy, 0, 2);
+  }
+
   release(randomValues: number[], motion: MotionInput = this.lastMotion) {
     if (this.phase !== 'holding') return;
 

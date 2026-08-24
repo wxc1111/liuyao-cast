@@ -78,6 +78,26 @@ test('released coins eventually settle into the tray', () => {
   );
 });
 
+test('explicit pointer energy increases toss height and spin', () => {
+  const randoms = [0.1, 0.7, 0.2, 0.8, 0.4, 0.6, 0.3, 0.9, 0.15, 0.5, 0.25, 0.75];
+  const lowEnergy = new CoinPhysics();
+  const highEnergy = new CoinPhysics();
+
+  lowEnergy.beginHolding();
+  lowEnergy.setHoldingEnergy(0);
+  lowEnergy.release(randoms);
+  highEnergy.beginHolding();
+  highEnergy.setHoldingEnergy(1.4);
+  highEnergy.release(randoms);
+
+  const lowCoins = lowEnergy.getSnapshot().coins;
+  const highCoins = highEnergy.getSnapshot().coins;
+  lowCoins.forEach((coin, index) => {
+    assert.ok(highCoins[index].vz > coin.vz);
+    assert.ok(Math.abs(highCoins[index].flipVelocity) > Math.abs(coin.flipVelocity));
+  });
+});
+
 test('a shallow held tilt reaches static rest without a long invisible tail', () => {
   const physics = new CoinPhysics();
   physics.beginHolding();

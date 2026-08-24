@@ -150,6 +150,12 @@ button {
 .tray-stage {
   flex: 0 0 auto;
   position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+
+.tray-stage.is-dragging {
+  cursor: grabbing;
 }
 
 .tray-image {
@@ -179,7 +185,12 @@ button {
   will-change: transform, left, top;
 }
 
+.coin-shadow {
+  z-index: 2;
+}
+
 .coin-body {
+  z-index: 3;
   border-radius: 50%;
   transform-origin: center;
   filter: drop-shadow(0 5px 5.5px rgb(0 0 0 / 34%));
@@ -221,6 +232,7 @@ button {
   letter-spacing: 0.08em;
   cursor: grab;
   touch-action: none;
+  z-index: 5;
 }
 
 .cast-button:active {
@@ -231,6 +243,57 @@ button {
 .cast-button:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.drag-guide {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.drag-line {
+  position: absolute;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(245 225 182 / 34%), #e3bd71);
+  box-shadow: 0 0 12px rgb(214 170 91 / 45%);
+  transform-origin: left center;
+}
+
+.drag-line::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid #f0cf8a;
+  border-right: 2px solid #f0cf8a;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.drag-origin,
+.drag-handle {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.drag-origin {
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgb(246 225 184 / 72%);
+  background: rgb(52 41 29 / 74%);
+}
+
+.drag-handle {
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border: 2px solid rgb(247 226 183 / 82%);
+  background: rgb(142 102 48 / 52%);
+  box-shadow: 0 0 0 6px rgb(231 192 117 / 12%), 0 4px 12px rgb(0 0 0 / 24%);
 }
 
 .instruction {
